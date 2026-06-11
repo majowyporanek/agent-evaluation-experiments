@@ -1,0 +1,123 @@
+% =====================================================================
+% Sekcja 3 - Metodologia (wersja kompaktowa, ~1-1.5 strony)
+% =====================================================================
+
+\section{Metodologia}
+\label{sec:metodologia}
+
+\subsection{Pytanie badawcze}
+\label{sec:rq}
+
+W tej pracy sprawdzane jest, czy perplexity i pokrewne sygnały
+liczone z rozkładu prawdopodobieństw tokenów - średnia entropia
+tokenowa, top-1 margin, top-1 mass - przewidują poprawność
+odpowiedzi LLM na konkretne pytanie. Pytanie to stawiane jest
+w dwóch ustawieniach: w czystym chain-of-thought (CoT) oraz
+w agencie ReAct z pojedynczym narzędziem.
+
+Drugie, pomocnicze pytanie dotyczy tego, gdzie wewnątrz trajektorii
+agenta najlepiej mierzyć tę pewność: czy mocniejszy sygnał płynie
+z segmentów \emph{action} (wywołań narzędzia), \emph{thought}
+(rozumowania) czy \emph{answer} (finalnej odpowiedzi).
+
+\subsection{Zbiór danych}
+\label{sec:gsm8k}
+
+Eksperymenty przeprowadzono na zbiorze GSM8K~\cite{cobbe2021gsm8k} -
+8500 zadań tekstowych z matematyki szkolnej (7473 trenujących
+i 1319 testowych), z których każde wymaga od dwóch do ośmiu kroków
+rozumowania. Każde zadanie kończy się jednoznaczną odpowiedzią
+liczbową poprzedzoną sekwencją \texttt{\#\#\#\#}, dzięki czemu
+ocena poprawności sprowadza się do porównania dwóch liczb - bez
+potrzeby angażowania drugiego modelu jako sędziego. Przykład
+z części testowej:
+
+\begin{quote}
+\textit{Natalia sprzedała spinacze 48 swoim przyjaciółkom w kwietniu,
+a w maju sprzedała ich o połowę mniej. Ile spinaczy łącznie
+sprzedała w kwietniu i maju?}\\
+\textit{Rozwiązanie}: $48/2 = 24$ spinaczy w maju; $48 + 24 = 72$
+spinaczy łącznie. \texttt{\#\#\#\# 72}
+\end{quote}
+
+GSM8K jest dla tego projektu wygodny z trzech powodów. Po pierwsze,
+ocena jest zerojedynkowa i obiektywna - liczba albo się zgadza,
+albo nie. Po drugie, zadania są krótkie i mieszczą się w oknie
+kontekstowym małych modeli (0,5-1,5B parametrów). Po trzecie,
+modele tej skali osiągają na GSM8K dokładność rzędu 20-60\%,
+czyli ani nie zgadują na ślepo, ani nie rozwiązują wszystkiego -
+co jest pożądane przy badaniu korelacji pewności z poprawnością.
+GSM8K jest też standardowym benchmarkiem dla prac o rozumowaniu
+krok po kroku od~\cite{wei2022cot}.
+
+Z części testowej losowano 50 zadań (faza pilotażowa) lub 60 zadań
+(eksperymenty główne) przy ustalonych ziarnach. Modele nie były
+dotrenowywane - wszystkie wyniki pochodzą z czystej ewaluacji.
+
+\subsection{Modele}
+\label{sec:modele}
+
+W eksperymentach użyto dwóch modeli z tej samej rodziny, różniących
+się tylko skalą: Qwen2.5-0.5B-Instruct (w fazie pilotażowej) oraz
+Qwen2.5-1.5B-Instruct (w eksperymentach głównych). Pozwala to
+sprawdzić, czy obserwacje z fazy pilotażowej utrzymują się przy
+przejściu na większy model. Spełnia to też wymóg co najmniej dwóch
+modeli w ramach kursu Warsztaty AI.
+
+\subsection{Dekodowanie i skoring}
+\label{sec:dekodowanie}
+
+We wszystkich eksperymentach stosowane jest dekodowanie zachłanne
+(\emph{greedy decoding}) - na każdym kroku wybierany jest token
+o najwyższym prawdopodobieństwie. Eliminuje to szum samplingu
+i sprawia, że wartości PPL między pytaniami można porównywać.
+Ma to swoją cenę: ponieważ model zawsze wybiera swój top-1 token,
+jego prawdopodobieństwa są systematycznie wysokie, a wartości PPL
+skupiają się blisko 1,0. Jest to jedno z ograniczeń, do których
+raport wraca w sekcji~\ref{sec:limitations}.
+
+Skoring działa w jednym przejściu modelu przez tekst złożony
+z promptu i wygenerowanej kontynuacji. Tokeny promptu są maskowane,
+więc do metryk wliczają się tylko te tokeny, które model sam
+wygenerował - mierzona jest jego pewność co do własnego rozumowania,
+a nie znajomość samego polecenia. Implementacja znajduje się w pliku
+\texttt{experiments/perplexity.py} (funkcja \texttt{score\_continuation}).
+
+\subsection{Dwa warianty: CoT i agent ReAct}
+\label{sec:settings}
+
+Pierwszy wariant to czysty chain-of-thought: model dostaje prompt
+zachęcający do myślenia krok po kroku i generuje całą odpowiedź
+w jednym przebiegu, bez narzędzi.
+
+Drugi wariant to pętla ReAct~\cite{yao2023react}, w której model
+na przemian produkuje segmenty oznaczone \texttt{Thought:},
+\texttt{Action:}, \texttt{Observation:} i \texttt{Answer:}.
+Jedynym dostępnym narzędziem jest kalkulator, a liczba wywołań
+w jednym pytaniu ograniczona jest do pięciu.
+
+Te same 60 pytań i ten sam model (Qwen2.5-1.5B) w obu wariantach
+pozwalają czysto porównać, czy włożenie modelu w pętlę agentową
+zmienia samą relację między PPL a poprawnością - nawet jeśli
+dokładność spada lub rośnie.
+
+\subsection{Metryki}
+\label{sec:metryki}
+
+Rozkład prawdopodobieństw tokenów sprowadzany jest do czterech
+skalarów. Pierwszy z nich, \textit{perplexity}, dane jest
+równaniem~\eqref{eq:ppl} i mówi, jak bardzo średnio model był
+zaskoczony własnymi tokenami. \textit{Średnia entropia tokenowa}
+$-\sum_v p(v)\log p(v)$, uśredniona po wszystkich pozycjach
+sekwencji, korzysta z całego rozkładu, a nie tylko z tokena, który
+został wybrany - dzięki temu reaguje także wtedy, gdy top-1 token
+jest pewny, ale za nim stoi ,,gęsta'' alternatywa.
+\textit{Top-1 margin} to różnica $p(\text{top-1}) - p(\text{top-2})$,
+czyli to, jak bardzo wybrany token wygrał z najbliższym konkurentem.
+\textit{Top-1 mass} to po prostu $p(\text{top-1})$.
+
+Do oceny kalibracji wykorzystano \emph{Expected Calibration Error}
+(ECE), liczone na binach o równej liczbie obserwacji
+($n_{\text{bins}}=10$). Pewność modelu definiowana jest tu jako
+$1/\mathrm{PPL}$. Niższe ECE oznacza lepszą zgodność tego, jak
+pewny był model, z tym, jak często rzeczywiście miał rację.

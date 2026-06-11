@@ -1,0 +1,68 @@
+% =====================================================================
+% Sekcja 5 - Kalibracja
+% Wartości z overnight_results/RESULTS_CALIBRATION_15B.md (calibration_15b.png).
+% =====================================================================
+
+\section{Kalibracja}
+\label{sec:kalibracja}
+
+Wyniki z sekcji~\ref{sec:wyniki} pokazują, że pewność modelu
+koreluje z poprawnością. Korelacja jest jednak własnością czysto
+porządkową - mówi tylko tyle, że pytania da się ustawić od
+najbardziej do najmniej ryzykownego. Nie odpowiada natomiast na
+pytanie, czy pewność rzędu 0,85 faktycznie oznacza 85\% szans na
+poprawną odpowiedź. To już kwestia kalibracji i właśnie jej
+dotyczy ta sekcja.
+
+Jako pewność modelu przyjęto $1/\mathrm{PPL}$ - liczbę z przedziału
+$(0, 1]$. Jej zgodność z poprawnością mierzy Expected Calibration
+Error (ECE) na binach o równej liczbie obserwacji
+($n_{\text{bins}}=10$). Biny o równej liczności są tu potrzebne,
+bo przy dekodowaniu zachłannym wartości $1/\mathrm{PPL}$ skupiają
+się blisko 1,0 (sekcja~\ref{sec:dekodowanie}) i biny o stałej
+szerokości byłyby w większości puste.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Ustawienie} & $n$ & \textbf{dokładność} & \textbf{ECE} \\
+\midrule
+1,5B CoT                       & 60 & 60,0\% & $0{,}265$ \\
+1,5B Agent (cała traj.)        & 60 & 28,3\% & $0{,}425$ \\
+1,5B Agent (segmenty action)   & 48 & 25,0\% & $0{,}445$ \\
+\bottomrule
+\end{tabular}
+\caption{Expected Calibration Error dla pewności zdefiniowanej
+jako $1/\mathrm{PPL}$ (binowanie o równej liczności,
+$n_{\text{bins}}=10$). Niższe ECE oznacza lepszą zgodność
+deklarowanej pewności z faktyczną poprawnością.}
+\label{tab:ece}
+\end{table}
+
+ECE jest wysokie w każdym ustawieniu (tabela~\ref{tab:ece}).
+Diagramy niezawodności (plik \texttt{calibration\_15b.png})
+tłumaczą skąd to się bierze: w prawie każdym binie średnia pewność
+leży powyżej średniej poprawności, czyli model jest przesadnie
+pewny. W wariancie agentowym widać to najmocniej - w najniższych
+binach pewności model deklaruje 0,49-0,66, podczas gdy poprawność
+w tych binach wynosi 0\%. Nawet tam, gdzie agent jest najmniej
+pewny, i tak jest pewniejszy, niż uzasadniałyby to jego wyniki.
+
+Zestawienie tej obserwacji z sekcją~\ref{sec:wyniki} prowadzi do
+głównego wniosku. Perplexity liczone na rozumowaniu modelu istotnie
+koreluje z poprawnością, a mimo to daje wysokie ECE. Dobry porządek
+nie pociąga więc za sobą dobrej kalibracji - jedno z drugiego nie
+wynika.
+
+Ma to konkretne znaczenie dla zastosowań. Tam, gdzie liczy się
+sama kolejność, perplexity się sprawdza: można nim wybrać
+najpewniejszą z kilku odpowiedzi albo wskazać najbardziej ryzykowne
+pytania do ręcznego sprawdzenia. Gorzej z regułami opartymi na
+stałym progu, w stylu ,,odrocz odpowiedź, gdy pewność spadnie
+poniżej 0,7'' - wartość 0,7 nie oznacza tu 70\% szans na poprawność,
+lecz znacznie mniej, więc taki próg trzeba najpierw wykalibrować
+na danych z konkretnego zadania. Jest to zastrzeżenie wobec prac
+omawianych w sekcji~\ref{sec:agent-uncertainty}: kierunek sygnału
+jest dobry, ale jego skala nie nadaje się do bezpośredniego progowania.
