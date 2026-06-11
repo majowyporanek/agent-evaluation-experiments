@@ -1,0 +1,119 @@
+% =====================================================================
+% Sekcja 4 - Wyniki (wersja kompaktowa)
+% Wartości liczbowe policzone bezpośrednio z plików w overnight_results/
+% i results/ - są zsynchronizowane z notebookiem main_results_report.ipynb.
+% =====================================================================
+
+\section{Wyniki}
+\label{sec:wyniki}
+
+Wszystkie wyniki pochodzą z jednego przebiegu kodu z katalogu
+\texttt{experiments/}, na ustalonych ziarnach losowości. Surowe
+CSV z wynikami zapisane są w katalogu \texttt{overnight\_results/}
+i można je odtworzyć z dołączonego notebooka
+\texttt{main\_results\_report.ipynb}.
+
+\subsection{Faza pilotażowa: Qwen-0,5B, czysty CoT, $n=150$}
+\label{sec:wyniki-pilot}
+
+Na 150 zadaniach (trzy ziarna po 50) model Qwen2.5-0,5B-Instruct
+osiąga dokładność \textbf{44,7\%} - mieszczącą się w przedziale,
+który dobrze nadaje się do badania korelacji pewności z poprawnością.
+
+Już na tej skali widać pierwszy systematyczny wzorzec: średnia
+entropia tokenowa jest lepszym predyktorem poprawności niż samo
+perplexity ($r = -0{,}317$, $p < 0{,}001$ vs $r = -0{,}236$,
+$p = 0{,}004$). Innymi słowy, sygnał z całego rozkładu
+prawdopodobieństw niesie więcej informacji niż średnia liczona
+tylko po tokenach, które model faktycznie wybrał. Ten sam wzorzec
+powtarza się w każdym kolejnym ustawieniu.
+
+\subsection{Agent ReAct z kalkulatorem: Qwen-1,5B, $n=60$}
+\label{sec:wyniki-agent}
+
+Na 60 zadaniach (dwa ziarna po 30) Qwen2.5-1,5B-Instruct
+w pętli ReAct z pojedynczym narzędziem (kalkulator) osiąga
+dokładność \textbf{28,3\%}. Spośród 60 trajektorii 12 (20\%)
+zostaje obciętych - model albo przekracza limit pięciu wywołań
+kalkulatora, albo łamie format dialogowy (np.\ zapomina o etykiecie
+\texttt{Action:}).
+
+Najciekawsza obserwacja w agencie dotyczy tego, \emph{gdzie} warto
+mierzyć pewność. Metryki liczone tylko na segmentach \texttt{Action:} -
+czyli tam, gdzie model formułuje wywołanie kalkulatora - dają
+najsilniejszą korelację z poprawnością: \texttt{action\_ppl\_mean}
+osiąga $r = -0{,}436$, $p = 0{,}002$, $n = 48$, z bootstrapowym
+95\% CI $[-0{,}60,\ -0{,}24]$ (5000 resamplowań). Te same metryki
+liczone tylko na finalnej odpowiedzi (\texttt{Answer:}) praktycznie
+nie niosą żadnego sygnału ($r = -0{,}099$, $p = 0{,}50$, CI
+$[-0{,}32,\ +0{,}21]$ - przedział ufności pokrywa zero).
+
+Intuicja stojąca za tym wynikiem jest dość prosta. W momencie,
+w którym model generuje finalną odpowiedź, wynik liczbowy znajduje
+się już w jego kontekście - widoczny jako rezultat ostatniego
+wywołania kalkulatora. Model w zasadzie kopiuje go z kontekstu,
+więc jest bardzo pewny niezależnie od tego, czy całe rozumowanie
+było prawidłowe. Pewność modelu w trakcie \emph{formułowania}
+wywołań - gdy musi zdecydować, co policzyć - rozróżnia poprawne
+i błędne odpowiedzi. Pewność na samej \emph{konkluzji} - już nie.
+
+Sam rozkład pewności też różni się między typami segmentów.
+Segmenty \texttt{Answer:} są skupione najmocniej (średnie PPL$=1{,}26$,
+top-1 margin $=0{,}80$), segmenty \texttt{Action:} - pośrednio
+(PPL$=1{,}46$, margin $=0{,}64$), segmenty \texttt{Thought:} - najmniej
+(PPL$=1{,}59$, margin $=0{,}61$). Ten porządek utrzymuje się w obu
+ziarnach.
+
+\subsection{Kontrola czystego CoT: Qwen-1,5B, $n=60$}
+\label{sec:wyniki-cot15}
+
+Żeby zobaczyć, jak na te same pytania reaguje model bez pętli
+agentowej, te same 60 zadań przepuszczono jeszcze raz przez
+Qwen2.5-1,5B-Instruct, tym razem w czystym CoT. Dokładność rośnie
+do \textbf{60,0\%} (wobec 28,3\% w wariancie agentowym), a najsilniejszy
+sygnał korelacyjny w całym projekcie pojawia się właśnie tutaj:
+średnia entropia tokenowa łańcucha rozumowania osiąga $r = -0{,}490$,
+$p < 0{,}001$, $n = 60$. Samo perplexity też koreluje z poprawnością,
+ale słabiej: $r = -0{,}283$, $p = 0{,}028$. Włożenie modelu w pętlę
+ReAct nie likwiduje więc sygnału PPL/entropii - przenosi go z całej
+kontynuacji na segmenty wywołań narzędzia.
+
+\subsection{Porównanie zbiorcze}
+\label{sec:headline}
+
+Tabela~\ref{tab:headline} zestawia korelacje Pearsona między metrykami
+a poprawnością w trzech głównych ustawieniach.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrrr}
+\toprule
+\textbf{Ustawienie} & \textbf{Metryka} & $n$ & $r$ & $p$ \\
+\midrule
+0,5B CoT (pilot)        & \texttt{cot\_perplexity}           & 150 & $-0{,}236$ & $0{,}004$ \\
+0,5B CoT (pilot)        & \texttt{cot\_mean\_token\_entropy} & 150 & $-0{,}317$ & $<0{,}001$ \\
+1,5B CoT                & \texttt{cot\_perplexity}           & 60  & $-0{,}283$ & $0{,}028$ \\
+1,5B CoT                & \texttt{cot\_mean\_token\_entropy} & 60  & $-0{,}490$ & $<0{,}001$ \\
+1,5B Agent (cała traj.) & \texttt{agent\_ppl\_mean}          & 60  & $-0{,}354$ & $0{,}006$ \\
+1,5B Agent (cała traj.) & \texttt{agent\_entropy\_mean}      & 60  & $-0{,}388$ & $0{,}002$ \\
+1,5B Agent (action)     & \texttt{action\_ppl\_mean}         & 48  & $-0{,}436$ & $0{,}002$ \\
+1,5B Agent (action)     & \texttt{action\_margin\_mean}      & 48  & $+0{,}454$ & $0{,}001$ \\
+\bottomrule
+\end{tabular}
+\caption{Korelacje Pearsona między metrykami a poprawnością
+w trzech ustawieniach ($n$ to liczba obserwacji po usunięciu
+braków danych). Wartości policzone bezpośrednio z plików CSV
+w katalogu \texttt{overnight\_results/}.}
+\label{tab:headline}
+\end{table}
+
+Z tabeli wyłaniają się dwa powtarzające się wzorce, niezależne
+od skali modelu i ustawienia. Po pierwsze, średnia entropia tokenowa
+i top-1 margin konsekwentnie wypadają lepiej niż samo perplexity
+jako predyktory poprawności - pełny rozkład prawdopodobieństw
+niesie więcej informacji niż prawdopodobieństwa tylko wybranych
+tokenów. Po drugie, wewnątrz agenta liczy się to, na której części
+trajektorii mierzy się pewność: korelacje na segmentach
+\texttt{action} są silniejsze niż na całych trajektoriach, a te
+z kolei silniejsze niż na samym segmencie \texttt{answer}.

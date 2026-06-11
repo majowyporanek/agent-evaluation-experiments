@@ -1,0 +1,65 @@
+% =====================================================================
+% Główny plik raportu - Warsztaty AI
+% "Miary perplexity a jakość agentów LLM"
+% Klaudia Chwistek, 2026
+%
+% KOMPILACJA: w Overleafie ustaw Compiler na pdfLaTeX (Menu -> Settings
+% -> Compiler). Ta preambuła wspiera pdfLaTeX z polskimi znakami.
+% Jeśli wolisz XeLaTeX / LuaLaTeX, zakomentuj inputenc i odkomentuj
+% fontspec (patrz niżej).
+% =====================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% --- Polskie znaki + typografia ---
+\usepackage[utf8]{inputenc}       % komentarz jeśli używasz XeLaTeX/LuaLaTeX
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[polish]{babel}
+
+% Alternatywa dla XeLaTeX/LuaLaTeX (zakomentuj 3 linie wyżej):
+% \usepackage{fontspec}
+% \usepackage[polish]{babel}
+
+% --- Matematyka ---
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% --- Tabele i grafiki ---
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+
+% --- Hyperlinks ---
+\usepackage[hidelinks]{hyperref}
+
+% --- Bibliografia ---
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
+
+% --- Tytuł ---
+\title{Miary perplexity a jakość agentów LLM\\
+       \large Raport projektu --- Warsztaty AI}
+\author{Klaudia Chwistek}
+\date{Maj 2026}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+% Tutaj wkleisz potem inne sekcje - na razie tylko sekcja 2
+% =====================================================================
+
+\input{01_wprowadzenie}
+\input{02_background}
+\input{03_metodologia}
+\input{04_wyniki}
+\input{05_kalibracja}
+\input{06_dyskusja}
+\input{07_ograniczenia}
+
+% --- Bibliografia ---
+\printbibliography
+
+\end{document}

@@ -1,0 +1,35 @@
+% =====================================================================
+% Sekcja 7 - Ograniczenia
+% =====================================================================
+
+\section{Ograniczenia}
+\label{sec:limitations}
+
+Wyniki tej pracy trzeba czytać z kilkoma zastrzeżeniami.
+
+Najpoważniejsze dotyczy dekodowania. Wszystkie eksperymenty
+korzystają z dekodowania zachłannego, przez co model na każdym kroku
+wybiera swój najbardziej prawdopodobny token, a wartości
+$1/\mathrm{PPL}$ skupiają się blisko 1,0. Sygnał pewności jest więc
+ściśnięty i część informacji, którą niosłoby próbkowanie z pełnego
+rozkładu, zostaje utracona. Powtórzenie eksperymentów z włączonym
+samplowaniem mogłoby dać bogatszy obraz - i prawdopodobnie inne,
+być może niższe ECE.
+
+Ograniczona jest też skala. Badano dwa małe modele z jednej rodziny
+(Qwen2.5 0,5B i 1,5B) na jednym zbiorze - GSM8K. To zadania
+arytmetyczne z dokładnym dopasowaniem odpowiedzi liczbowej, więc nie
+wiadomo, na ile obserwacje przenoszą się na większe modele ani na
+zadania o innym charakterze (otwarte odpowiedzi, kod, dłuższe
+trajektorie z wieloma narzędziami). Agent korzystał z jednego
+narzędzia - kalkulatora - co jest najprostszym możliwym ustawieniem
+ReAct.
+
+Niewielkie są wreszcie próby. Korelacje liczone są na 60 (a w pilocie
+150) obserwacjach, a w analizie segmentów \texttt{Action} efektywne
+$n$ spada do 48. Przy takich liczebnościach przedziały ufności są
+szerokie - bootstrapowy 95\% CI dla najmocniejszej korelacji sięga
+od $-0{,}60$ do $-0{,}24$ - więc raportowane współczynniki należy
+traktować jako rzędy wielkości i kierunki zależności, a nie jako
+precyzyjne oszacowania. Z tego samego powodu w pracy nie testowano
+rekalibracji pewności; wskazano ją jedynie jako naturalny dalszy krok.

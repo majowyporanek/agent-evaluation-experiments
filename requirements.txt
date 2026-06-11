@@ -1,0 +1,8 @@
+torch>=2.1
+transformers>=4.40
+accelerate>=0.28
+datasets>=2.18
+pandas>=2.0
+matplotlib>=3.7
+scipy>=1.11
+tqdm>=4.66

@@ -1,0 +1,104 @@
+% =====================================================================
+% Sekcja 2 - Tło teoretyczne (wersja kompaktowa, ~1 strona)
+% =====================================================================
+
+\section{Tło teoretyczne}
+\label{sec:tlo}
+
+\subsection{Perplexity jako miara modelu językowego}
+\label{sec:perplexity-def}
+
+Perplexity (PPL) to średnia geometryczna odwrotności prawdopodobieństw,
+jakie model przypisuje kolejnym tokenom danej sekwencji. Dla
+sekwencji $x_1, \dots, x_N$ pod modelem $p_\theta$:
+\begin{equation}
+\mathrm{PPL}(x_{1:N}) = \exp\!\left(-\frac{1}{N} \sum_{t=1}^{N} \log p_\theta(x_t \mid x_{<t})\right).
+\label{eq:ppl}
+\end{equation}
+Niższa wartość oznacza, że model był mniej zaskoczony tym, co
+zobaczył. Klasycznie PPL używa się jako miary jakości samego
+modelu językowego - im niższe na zbiorze testowym, tym lepiej
+model przewiduje tekst. W tej pracy interesuje jednak inne
+zastosowanie: PPL liczone na własnej odpowiedzi modelu, jako
+sygnał mówiący o tym, czy ta odpowiedź jest poprawna - taki,
+żeby agent mógł np.\ odroczyć odpowiedź lub poprosić o pomoc,
+gdy jego pewność spada.
+
+\subsection{Argumenty za perplexity}
+\label{sec:pro-ppl}
+
+Gonen i in.~\cite{gonen2023demystifying} pokazali, że perplexity
+samego promptu jest dobrym predyktorem skuteczności modelu - prompty
+o niższym PPL dają wyższą trafność odpowiedzi. Interpretacja
+autorów: prompty, które ,,brzmią naturalniej'' dla modelu (mniejsze
+zaskoczenie na jego tokenach), są dla niego łatwiejsze i prowadzą
+do lepszych wyników. Sam pomiar PPL działa tu jako tania heurystyka
+wyboru lepszego promptu - bez konieczności faktycznego uruchamiania
+zadania i sprawdzania wyniku.
+
+\subsection{Argumenty przeciw perplexity}
+\label{sec:anti-ppl}
+
+Wang i in.~\cite{wang2022perplexity} pokazują drugą stronę medalu:
+PPL bywa zawodne jako miara jakości tekstu. Autorzy zwracają uwagę
+na trzy pułapki. Po pierwsze, krótsze teksty dostają wyższe PPL
+niezależnie od jakości (\emph{length bias}). Po drugie, powtarzające
+się fragmenty sztucznie je zaniżają (\emph{repetition sensitivity}).
+Po trzecie, drobne różnice w interpunkcji potrafią wprowadzać dużą
+zmienność (\emph{punctuation dependency}). Zestawienie tych dwóch
+prac otwiera pytanie istotne dla tego raportu: czy ten obraz
+zmienia się, gdy zamiast pojedynczego promptu analizowane są
+wieloetapowe trajektorie agentów?
+
+\subsection{Perplexity w długim kontekście}
+\label{sec:longppl}
+
+Fang i in.~\cite{fang2025longppl} pokazują problem klasycznego PPL
+na zadaniach z długim kontekstem. Standardowe PPL uśrednia
+logarytmy prawdopodobieństw po wszystkich tokenach z taką samą
+wagą, przez co całość zdominowana jest przez tokeny lokalnie
+przewidywalne - spójniki, końcówki fleksyjne, znaki interpunkcyjne -
+a wkład tokenów, które naprawdę zależą od dalekiego kontekstu,
+ginie w średniej. Zaproponowana przez autorów metryka LongPPL
+waży tokeny zgodnie z tym, jak bardzo zależą od dalekiego kontekstu;
+na benchmarkach długiego kontekstu osiąga ona korelację Pearsona
+$r \approx -0{,}96$ z faktyczną wydajnością modeli - podczas gdy
+zwykłe PPL daje na tych samych danych wartość bliską zeru.
+
+Ten sam mechanizm może działać też w przypadku trajektorii agentów.
+Trajektorie agenta ReAct - złożone z naprzemiennych bloków
+\texttt{Thought}, \texttt{Action}, \texttt{Observation}
+i \texttt{Answer} - są długie i pełne tokenów strukturalnych
+(samych etykiet segmentów, znaków interpunkcyjnych), na których
+model jest bardzo pewny niezależnie od jakości rozwiązania. Takie
+tokeny mogą zdominować jedną wartość PPL liczoną na całej
+trajektorii i wytłumić sygnał z miejsc, w których model
+rzeczywiście ,,myśli'' - na przykład formułuje wywołanie
+kalkulatora. Stąd w tej pracy oprócz PPL na całej trajektorii
+liczone jest też PPL osobno na segmentach \texttt{Action}
+i \texttt{Answer} (sprawdzane w sekcji~\ref{sec:wyniki-agent}).
+Szerszy przegląd metryk ewaluacji agentów - w którym PPL pojawia
+się obok trafności wywołań narzędzi, jakości planu, metryk
+trajektorii i bezpieczeństwa - można znaleźć w pracy Mohammadi
+i in.~\cite{mohammadi2025survey}.
+
+\subsection{Niepewność jako sygnał sterujący w agentach}
+\label{sec:agent-uncertainty}
+
+Trzy nowsze artykuły idą krok dalej: zamiast tylko mierzyć pewność
+modelu, wpinają ją wprost w pętlę decyzyjną agenta. ReDAct~\cite{redact2026}
+wprowadza próg pewności, poniżej którego agent odracza odpowiedź
+zamiast ryzykować błąd. \emph{Every Response Counts}~\cite{everyresponse2026}
+zbiera niepewność wielu agentów pracujących nad tym samym zadaniem
+i - korzystając z dekompozycji tensorowej - próbuje wyłowić, kiedy
+modele systematycznie się ze sobą nie zgadzają. \emph{Towards
+Agents That Know When They Don't Know}~\cite{towardsknow2025}
+traktuje niską pewność jako sygnał, że trzeba się zatrzymać
+i sprawdzić aktualny krok rozumowania, zanim agent pójdzie dalej.
+
+Wszystkie trzy prace milcząco zakładają, że pewność liczona
+z rozkładu tokenów rzeczywiście mówi coś o jakości tego, co model
+generuje. W tej pracy sprawdzane jest, na ile to założenie się
+utrzymuje na prostym agencie ReAct rozwiązującym zadania matematyczne:
+jak silna jest korelacja PPL i entropii z poprawnością i czy ma
+znaczenie, na której części trajektorii się ją mierzy.

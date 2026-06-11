@@ -1,0 +1,68 @@
+% =====================================================================
+% Sekcja 6 - Dyskusja
+% =====================================================================
+
+\section{Dyskusja}
+\label{sec:dyskusja}
+
+Zebrane wyniki układają się w kilka spójnych wątków, które warto
+omówić razem - bo dopiero zestawione ze sobą i z literaturą z
+sekcji~\ref{sec:tlo} mówią coś więcej niż pojedyncze współczynniki
+korelacji.
+
+Pierwszy wątek dotyczy wyboru metryki. We wszystkich ustawieniach -
+od pilotażowego modelu 0,5B po agenta 1,5B - średnia entropia
+tokenowa i top-1 margin okazują się lepszymi predyktorami
+poprawności niż samo perplexity. Różnica jest niewielka, ale
+konsekwentna, i ma dość naturalne wytłumaczenie: entropia i margin
+korzystają z całego rozkładu prawdopodobieństw, a perplexity tylko
+z prawdopodobieństw tokenów, które model faktycznie wybrał. Model
+może wybrać token z wysokim prawdopodobieństwem, mając tuż za nim
+silną alternatywę - perplexity tego nie zauważy, a margin i entropia
+tak. Sugeruje to, że w dalszych pracach nad pewnością agentów warto
+sięgać po metryki rozkładowe, a nie ograniczać się do klasycznego PPL.
+
+Drugi wątek to lokalizacja pomiaru wewnątrz agenta. Sygnał nie jest
+rozłożony równomiernie po trajektorii: najsilniej koreluje z
+poprawnością pewność na segmentach \texttt{Action}, słabiej na całej
+trajektorii, a na samym segmencie \texttt{Answer} znika niemal
+zupełnie. Wynika to z mechaniki ReAct - w momencie formułowania
+finalnej odpowiedzi wynik liczbowy jest już w kontekście, więc model
+go po prostu przepisuje i jest pewny niezależnie od tego, czy droga
+do tego wyniku była poprawna. Pewność niesie informację tam, gdzie
+model rzeczywiście podejmuje decyzję (co policzyć), a nie tam, gdzie
+tylko odtwarza gotowy rezultat. To ustalenie jest zbieżne z
+obserwacją Fanga i in.~\cite{fang2025longppl}, że uśrednianie po
+całej długiej sekwencji rozcieńcza sygnał - tyle że tutaj rolę
+,,nieistotnych'' tokenów grają nie spójniki, lecz cała końcowa
+faza kopiowania odpowiedzi.
+
+Trzeci, najważniejszy wątek dotyczy różnicy między korelacją a
+kalibracją (sekcja~\ref{sec:kalibracja}). Perplexity porządkuje
+pytania sensownie, ale jako bezwzględna miara pewności jest źle
+wykalibrowane - model jest systematycznie zbyt pewny siebie, i to
+tym bardziej, im trudniejsze ustawienie. Rozstrzyga to pozornie
+sprzeczne stanowiska z literatury. Gonen i
+in.~\cite{gonen2023demystifying} mają rację, że niższe PPL wiąże się
+z lepszymi wynikami - kierunek jest poprawny. Zastrzeżenia Wanga i
+in.~\cite{wang2022perplexity} co do wiarygodności PPL też są jednak
+zasadne, jeśli traktować je jako uwagę o skali, a nie o porządku.
+Te dwa stanowiska nie są sprzeczne - opisują dwie różne własności
+tej samej liczby.
+
+Płynie stąd praktyczny wniosek dla prac, które wbudowują pewność w
+pętlę decyzyjną agenta (sekcja~\ref{sec:agent-uncertainty}). ReDAct
+\cite{redact2026} i pokrewne podejścia opierają się na progowaniu
+surowej pewności, a wyniki tej pracy pokazują, że taki próg nie
+przenosi się między zadaniami bez rekalibracji: ta sama wartość
+liczbowa oznacza inną faktyczną szansę poprawności w czystym CoT i
+w agencie. Sam pomysł sterowania niepewnością pozostaje sensowny,
+ale wymaga albo kalibracji na danych docelowych, albo oparcia decyzji
+na względnym uporządkowaniu, a nie na sztywnym progu.
+
+Na koniec warto odnotować, że dwa główne wzorce - przewaga metryk
+rozkładowych oraz przeniesienie sygnału na segmenty \texttt{Action} -
+utrzymują się przy przejściu z modelu 0,5B na 1,5B oraz między
+ziarnami losowości. Przy skali tego projektu nie jest to dowód
+ogólności, ale sugeruje, że obserwacje nie są wyłącznie artefaktem
+jednego modelu czy jednego losowania danych.

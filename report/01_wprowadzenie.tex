@@ -1,0 +1,51 @@
+% =====================================================================
+% Sekcja 1 - Wprowadzenie
+% =====================================================================
+
+\section{Wprowadzenie}
+\label{sec:wprowadzenie}
+
+Perplexity (PPL) powstało jako miara jakości modelu językowego -
+mówi, jak bardzo model jest zaskoczony obserwowanym tekstem. Z
+czasem zaczęto je jednak traktować szerzej: jako tani sygnał o tym,
+czy model dobrze radzi sobie z konkretnym zadaniem, liczony bez
+potrzeby sprawdzania wyniku innym modelem czy człowiekiem. Pomysł
+jest kuszący zwłaszcza w agentach LLM, gdzie taki sygnał mógłby
+sterować decyzjami - kazać agentowi wstrzymać się z odpowiedzią,
+poprosić o pomoc albo przeplanować działanie, gdy jego pewność spada.
+
+Literatura nie jest tu jednak zgodna. Część prac pokazuje, że niższe
+PPL wiąże się z lepszymi wynikami, inne - że PPL bywa zawodne i
+podatne na artefakty długości czy interpunkcji. Większość tych badań
+dotyczy przy tym pojedynczych, statycznych promptów. Tymczasem
+agent nie produkuje jednej odpowiedzi, lecz całą trajektorię -
+naprzemienne kroki rozumowania, wywołań narzędzi i obserwacji - i nie
+jest oczywiste, czy wnioski z analizy pojedynczych promptów dają się
+na taki przypadek przenieść.
+
+Niniejsza praca bada to empirycznie. Sprawdzane jest, czy perplexity
+i pokrewne sygnały rozkładowe (entropia tokenowa, top-1 margin)
+przewidują poprawność odpowiedzi małego modelu LLM na zadaniach
+matematycznych z GSM8K, w dwóch ustawieniach: czystego
+chain-of-thought oraz agenta ReAct z kalkulatorem. Osobno badane
+jest, w którym miejscu trajektorii agenta sygnał ten jest
+najsilniejszy.
+
+Z eksperymentów wyłaniają się trzy obserwacje. Metryki korzystające
+z całego rozkładu prawdopodobieństw (entropia, margin) konsekwentnie
+przewidują poprawność lepiej niż samo perplexity. Wewnątrz agenta
+sygnał nie jest rozłożony równomiernie - najsilniej koreluje z
+poprawnością pewność na segmentach formułujących wywołania narzędzia,
+a praktycznie zanika na finalnej odpowiedzi. Wreszcie, choć pewność
+porządkuje pytania sensownie, jako bezwzględna miara jest źle
+wykalibrowana: model jest systematycznie zbyt pewny siebie. Ta ostatnia
+obserwacja godzi sprzeczne stanowiska z literatury - PPL jest
+użytecznym sygnałem porządkowym, ale zawodnym sygnałem ilościowym.
+
+Dalsza część pracy ma następującą strukturę. Sekcja~\ref{sec:tlo}
+omawia tło teoretyczne i powiązane prace. Sekcja~\ref{sec:metodologia}
+opisuje zbiór danych, modele, sposób skoringu i badane metryki.
+Sekcja~\ref{sec:wyniki} przedstawia wyniki korelacyjne w trzech
+ustawieniach, a sekcja~\ref{sec:kalibracja} - analizę kalibracji.
+Sekcja~\ref{sec:dyskusja} zestawia obserwacje z literaturą, a
+sekcja~\ref{sec:limitations} omawia ograniczenia.
